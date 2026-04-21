@@ -2,10 +2,12 @@ FROM alpine:latest
 
 USER root
 
-RUN apk add --no-cache bash curl && \
-    ln -sf /bin/bash /bin/sh && \
+RUN apk add --no-cache curl && \
+    curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
+    chmod +x /tmp/hydro-setup.sh && \
     set -ex && \
-    LANG=zh . <(curl https://hydro.ac/setup.sh) --no-caddy
+    LANG=zh /tmp/hydro-setup.sh --no-caddy && \
+    rm -f /tmp/hydro-setup.sh
 
 RUN pm2 ls
 
