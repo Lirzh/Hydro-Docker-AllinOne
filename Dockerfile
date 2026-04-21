@@ -3,7 +3,7 @@ FROM debian:bookworm-slim
 USER root
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl bash && \
+    apt-get install -y --no-install-recommends curl bash ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
     chmod +x /tmp/hydro-setup.sh && \
