@@ -2,18 +2,20 @@ FROM node:22-trixie-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 导入 MongoDB GPG key 并添加 MongoDB 源
-RUN curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg && \
-    echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" > /etc/apt/sources.list.d/mongodb-org-7.0.list
-
-# 基础依赖 - 合并 backend 和 judge 的所有依赖,以及 MongoDB
+# 先安装基础工具(curl, gpg等),然后导入 MongoDB GPG key 并添加 MongoDB 源,最后安装所有依赖
 RUN apt-get -qq update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    gnupg \
+    ca-certificates && \
+    curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg && \
+    echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" > /etc/apt/sources.list.d/mongodb-org-7.0.list && \
+    apt-get -qq update && \
     apt-get install -y \
     gcc \
     g++ \
     make \
     wget \
-    curl \
     build-essential \
     zlib1g-dev \
     libssl-dev \
@@ -40,8 +42,6 @@ RUN apt-get -qq update && \
     bash \
     python3 \
     pypy3 \
-    ca-certificates \
-    gnupg \
     mongodb-org \
     && rm -rf /var/lib/apt/lists/*
 
