@@ -2,13 +2,9 @@ FROM nixos/nix:latest
 
 USER root
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl bash ca-certificates && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
+RUN curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
     chmod +x /tmp/hydro-setup.sh && \
     LANG=zh bash /tmp/hydro-setup.sh --no-caddy && \
-    . /root/.nix-profile/etc/profile.d/nix.sh && \
     rm -f /tmp/hydro-setup.sh
 
 RUN pm2 ls
