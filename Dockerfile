@@ -1,32 +1,97 @@
-FROM nixos/nix:latest
+FROM node:22-trixie-slim
 
-USER root
+ENV DEBIAN_FRONTEND=noninteractive
 
-# 创建兼容的 os-release 文件
-RUN echo -e '\
-NAME=NixOS\n\
-ID=nixos\n\
-VERSION="24.11 (Tapir)"\n\
-VERSION_ID=24.11\n\
-PRETTY_NAME="NixOS 24.11 (Tapir)"\n\
-BUILD_ID=24.11\n\
-ANSI_COLOR="38;2;77;156;212"\n\
-HOME_URL="https://nixos.org/"\n\
-DOCUMENTATION_URL="https://nixos.org/learn.html"\n\
-SUPPORT_URL="https://nixos.org/community.html"\n\
-BUG_REPORT_URL="https://github.com/NixOS/nixpkgs/issues"\n\
-LOGO=nixos' > /etc/os-release
+# 基础依赖 - 合并 backend 和 judge 的所有依赖
+RUN apt-get -qq update && \
+    apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    wget \
+    curl \
+    build-essential \
+    zlib1g-dev \
+    libssl-dev \
+    libffi-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    tk-dev \
+    openjdk-21-jdk-headless \
+    fpc \
+    fp-compiler \
+    rustc \
+    ghc \
+    cabal-install \
+    libjavascriptcoregtk-4.0-bin \
+    golang \
+    ruby \
+    mono-runtime \
+    mono-mcs \
+    kotlin \
+    php \
+    php-cli \
+    nodejs \
+    bash \
+    python3 \
+    pypy3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# 创建标准 Linux 兼容目录并安装 bash
-RUN mkdir -p /usr/local/bin /usr/local/lib /usr/local/etc && \
-    apk add --no-cache bash
+# 手动安装 Python2.7.18
+RUN cd /tmp && \
+    wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz && \
+    tar -xzf Python-2.7.18.tgz && \
+    cd Python-2.7.18 && \
+    ./configure --prefix=/usr/local --enable-unicode=ucs4 && \
+    make -j$(nproc) && \
+    make altinstall && \
+    ln -s /usr/local/bin/python2.7 /usr/bin/python2 && \
+    cd / && rm -rf /tmp/Python-2.7.18*
 
-# 复制脚本文件到容器
-COPY setup.sh /tmp/setup.sh
-COPY nix.sh /tmp/nix.sh
+# 设置 python 命令优先使用 python3
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 2 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python2 1
 
-# 使用 bash 显式执行脚本
-RUN chmod +x /tmp/setup.sh /tmp/nix.sh && bash /tmp/setup.sh
+# 验证工具链
+RUN gcc --version && \
+    g++ --version && \
+    fpc -iV && \
+    javac -version && \
+    rustc --version && \
+    ghc --version && \
+    cabal --version && \
+    go version && \
+    ruby --version && \
+    mono --version && \
+    kotlinc -version && \
+    php --version && \
+    node --version && \
+    python2 --version && \
+    python3 --version && \
+    pypy3 --version
 
-# 容器启动时自动加载环境
-CMD ["source", "/etc/profile", "&&", "pm2", "logs"]
+# 创建必要目录
+RUN mkdir -p /root/.hydro
+
+# 复制配置文件
+ADD ./judge.yaml /root/judge.yaml
+ADD ./judge.yaml /root/.hydro/judge.yaml
+
+# 安装 pm2、hydrooj、ui-default 和 hydrojudge
+RUN yarn global add pm2 hydrooj @hydrooj/ui-default @hydrooj/hydrojudge && \
+    arch=$(dpkg --print-architecture) && \
+    case "$arch" in \
+      amd64)  url="https://github.com/criyle/go-judge/releases/download/v1.8.0/go-judge_1.8.0_linux_amd64" ;; \
+      arm64)  url="https://github.com/criyle/go-judge/releases/download/v1.8.0/go-judge_1.8.0_linux_arm64" ;; \
+      *) echo "Unsupported architecture: $arch" && exit 1 ;; \
+    esac && \
+    wget "$url" -O /usr/bin/sandbox && \
+    chmod +x /usr/bin/sandbox
+
+# 复制并设置 entrypoint
+ADD ./entrypoint.sh /root/entrypoint.sh
+RUN chmod +x /root/entrypoint.sh
+
+ENTRYPOINT ["/root/entrypoint.sh"]
