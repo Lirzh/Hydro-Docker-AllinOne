@@ -72,12 +72,8 @@ RUN gcc --version && \
     python3 --version && \
     pypy3 --version
 
-# 创建必要目录
+# 创建必要目录并复制配置文件
 RUN mkdir -p /root/.hydro
-
-# 复制配置文件
-ADD ./judge.yaml /root/judge.yaml
-ADD ./judge.yaml /root/.hydro/judge.yaml
 
 # 安装 pm2、hydrooj、ui-default 和 hydrojudge
 RUN yarn global add pm2 hydrooj @hydrooj/ui-default @hydrooj/hydrojudge && \

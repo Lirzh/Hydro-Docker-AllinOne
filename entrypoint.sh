@@ -18,13 +18,6 @@ if [ ! -f "$ROOT/config.json" ]; then
     echo "{\"host\": \"${MONGO_HOST}\", \"port\": \"${MONGO_PORT}\", \"name\": \"${MONGO_NAME}\", \"username\": \"${MONGO_USER}\", \"password\": \"${MONGO_PASS}\"}" > "$ROOT/config.json"
 fi
 
-# 初始化 judge.yaml - 修改 server_url 指向本地
-if [ ! -f "$ROOT/judge.yaml" ]; then
-    cp /root/judge.yaml "$ROOT/judge.yaml"
-    # 将 server_url 改为 localhost，因为在同一容器内
-    sed -i 's|server_url: http://oj-backend:8888/|server_url: http://localhost:8888/|g' "$ROOT/judge.yaml"
-fi
-
 # 首次运行初始化用户
 if [ ! -f "$ROOT/first" ]; then
     echo "for marking use only!" > "$ROOT/first"
@@ -36,9 +29,6 @@ fi
 
 # 启动 sandbox
 pm2 start sandbox --name sandbox
-
-# 启动 hydrojudge
-pm2 start hydrojudge --name hydrojudge
 
 # 启动 hydrooj (backend)
 pm2-runtime start hydrooj --name hydrooj
