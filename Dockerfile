@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM nixos/nix:latest
 
 USER root
 
