@@ -17,13 +17,16 @@ SUPPORT_URL="https://nixos.org/community.html"\n\
 BUG_REPORT_URL="https://github.com/NixOS/nixpkgs/issues"\n\
 LOGO=nixos' > /etc/os-release
 
-# 创建标准 Linux 兼容目录
-RUN mkdir -p /usr/local/bin /usr/local/lib /usr/local/etc
+# 创建标准 Linux 兼容目录并安装 bash
+RUN mkdir -p /usr/local/bin /usr/local/lib /usr/local/etc && \
+    apk add --no-cache bash
 
-# 复制脚本文件到容器并执行
+# 复制脚本文件到容器
 COPY setup.sh /tmp/setup.sh
 COPY nix.sh /tmp/nix.sh
-RUN chmod +x /tmp/setup.sh /tmp/nix.sh && /tmp/setup.sh
+
+# 使用 bash 显式执行脚本
+RUN chmod +x /tmp/setup.sh /tmp/nix.sh && bash /tmp/setup.sh
 
 # 容器启动时自动加载环境
 CMD ["source", "/etc/profile", "&&", "pm2", "logs"]
