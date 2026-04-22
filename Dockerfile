@@ -2,7 +2,11 @@ FROM node:22-trixie-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 基础依赖 - 合并 backend 和 judge 的所有依赖
+# 导入 MongoDB GPG key 并添加 MongoDB 源
+RUN curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg && \
+    echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" > /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# 基础依赖 - 合并 backend 和 judge 的所有依赖,以及 MongoDB
 RUN apt-get -qq update && \
     apt-get install -y \
     gcc \
@@ -37,6 +41,8 @@ RUN apt-get -qq update && \
     python3 \
     pypy3 \
     ca-certificates \
+    gnupg \
+    mongodb-org \
     && rm -rf /var/lib/apt/lists/*
 
 # 手动安装 Python2.7.18
@@ -73,7 +79,9 @@ RUN gcc --version && \
     pypy3 --version
 
 # 创建必要目录并复制配置文件
-RUN mkdir -p /root/.hydro
+RUN mkdir -p /root/.hydro && \
+    mkdir -p /data/db && \
+    mkdir -p /var/log/mongodb
 
 # 安装 pm2、hydrooj、ui-default 和 hydrojudge
 RUN yarn global add pm2 hydrooj @hydrooj/ui-default @hydrooj/hydrojudge && \
