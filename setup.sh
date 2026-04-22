@@ -15,7 +15,7 @@ echo "Hydro includes system telemetry,
 which helps developers figure out the most commonly used operating system and platform.
 To disable this feature, checkout our sourcecode."
 mkdir -p /data/db /data/file ~/.hydro
-bash ./nix.sh
+bash /tmp/nix.sh
 export PATH=$HOME/.nix-profile/bin:$PATH
 nix-env -iA nixpkgs.nodejs nixpkgs.coreutils nixpkgs.qrencode
 echo "扫码加入QQ群："

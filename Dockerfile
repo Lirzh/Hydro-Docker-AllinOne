@@ -20,7 +20,10 @@ LOGO=nixos' > /etc/os-release
 # 创建标准 Linux 兼容目录
 RUN mkdir -p /usr/local/bin /usr/local/lib /usr/local/etc
 
-RUN setup.sh
+# 复制脚本文件到容器并执行
+COPY setup.sh /tmp/setup.sh
+COPY nix.sh /tmp/nix.sh
+RUN chmod +x /tmp/setup.sh /tmp/nix.sh && /tmp/setup.sh
 
 # 容器启动时自动加载环境
 CMD ["source", "/etc/profile", "&&", "pm2", "logs"]
