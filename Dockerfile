@@ -1,30 +1,21 @@
-FROM ubuntu:24.04
+FROM nixos/nix:latest
 
 USER root
 
-# 安装必要的依赖
-RUN apt-get update && apt-get install -y \
-    curl \
-    xz-utils \
-    sudo \
-    bash \
-    ca-certificates \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
+# 创建兼容的 os-release 文件,让安装脚本能识别系统类型
+RUN echo 'NAME=NixOS' > /etc/os-release && \
+    echo 'ID=nixos' >> /etc/os-release && \
+    echo 'VERSION="24.11 (Tapir)"' >> /etc/os-release && \
+    echo 'VERSION_ID=24.11' >> /etc/os-release && \
+    echo 'PRETTY_NAME="NixOS 24.11 (Tapir)"' >> /etc/os-release && \
+    echo 'BUILD_ID=24.11' >> /etc/os-release && \
+    echo 'ANSI_COLOR="38;2;77;156;212"' >> /etc/os-release && \
+    echo 'HOME_URL="https://nixos.org/"' >> /etc/os-release && \
+    echo 'DOCUMENTATION_URL="https://nixos.org/learn.html"' >> /etc/os-release && \
+    echo 'SUPPORT_URL="https://nixos.org/community.html"' >> /etc/os-release && \
+    echo 'BUG_REPORT_URL="https://github.com/NixOS/nixpkgs/issues"' >> /etc/os-release && \
+    echo 'LOGO=nixos' >> /etc/os-release
 
-# 安装 Nix
-RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
-
-# 配置 Nix 环境变量并安装 Hydro
-ENV PATH="/root/.nix-profile/bin:${PATH}"
-RUN echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /root/.bashrc
-
-# 配置 Nix 使用国内镜像源
-RUN mkdir -p /root/.config/nix && \
-    echo 'substituters = https://mirrors.bfsu.edu.cn/nix-channels/store https://cache.nixos.org/' > /root/.config/nix/nix.conf && \
-    echo 'trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=' >> /root/.config/nix/nix.conf
-
-# 下载并运行 Hydro 安装脚本
 RUN curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
     chmod +x /tmp/hydro-setup.sh && \
     LANG=zh bash /tmp/hydro-setup.sh --no-caddy && \
