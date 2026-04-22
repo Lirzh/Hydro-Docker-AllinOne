@@ -26,20 +26,30 @@ RUN curl -fsSL --max-time 60 --retry 3 https://hydro.ac/nix.sh -o /tmp/hydro-nix
     bash /tmp/hydro-nix.sh && \
     rm -f /tmp/hydro-nix.sh
 
-# 安装 Hydro 主程序（持久化 PATH 环境变量）
-RUN curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
-    chmod +x /tmp/hydro-setup.sh && \
-    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /etc/profile && \
-    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /root/.bashrc && \
+# 安装 Hydro 主程序（显式加载 Nix 环境并设置完整 PATH）
+RUN . /root/.nix-profile/etc/profile.d/nix.sh && \
     export PATH="/root/.nix-profile/bin:$PATH" && \
+    export YARN_GLOBAL_BIN="$(yarn global bin)" && \
+    export PATH="$YARN_GLOBAL_BIN:$PATH" && \
+    curl -fsSL --max-time 60 --retry 3 https://hydro.ac/setup.sh -o /tmp/hydro-setup.sh && \
+    chmod +x /tmp/hydro-setup.sh && \
     LANG=zh bash /tmp/hydro-setup.sh --no-caddy && \
     rm -f /tmp/hydro-setup.sh
 
-# 加载 Nix 环境后执行命令（必须在同一个 RUN 里）
-RUN source /etc/profile && \
+# 持久化环境变量配置
+RUN echo 'source /root/.nix-profile/etc/profile.d/nix.sh' >> /etc/profile && \
+    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /etc/profile && \
+    echo 'export PATH="$(yarn global bin):$PATH"' >> /etc/profile && \
+    echo 'source /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc && \
+    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> /root/.bashrc && \
+    echo 'export PATH="$(yarn global bin):$PATH"' >> /root/.bashrc
+
+# 验证安装
+RUN . /root/.nix-profile/etc/profile.d/nix.sh && \
+    export PATH="/root/.nix-profile/bin:$(yarn global bin):$PATH" && \
     pm2 ls && \
     yarn -v && \
-    yarn config set registry https://registry.npmmirror.com
+    which hydrooj && \
+    which hydrojudge
 
-# 容器启动时自动加载环境
-CMD ["source", "/etc/profile", "&&", "pm2", "logs"]
+CMD ["pm2", "logs"]
