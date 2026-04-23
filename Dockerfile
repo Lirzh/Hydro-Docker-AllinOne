@@ -24,21 +24,6 @@ RUN apt-get -qq update && \
     libreadline-dev \
     libsqlite3-dev \
     tk-dev \
-    openjdk-21-jdk-headless \
-    fpc \
-    fp-compiler \
-    rustc \
-    ghc \
-    cabal-install \
-    libjavascriptcoregtk-4.0-bin \
-    golang \
-    ruby \
-    mono-runtime \
-    mono-mcs \
-    kotlin \
-    php \
-    php-cli \
-    nodejs \
     bash \
     python3 \
     pypy3 \
@@ -63,20 +48,9 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 2 && \
 # 验证工具链
 RUN gcc --version && \
     g++ --version && \
-    fpc -iV && \
-    javac -version && \
-    rustc --version && \
-    ghc --version && \
-    cabal --version && \
-    go version && \
-    ruby --version && \
-    mono --version && \
-    kotlinc -version && \
-    php --version && \
-    node --version && \
-    python2 --version && \
     python3 --version && \
-    pypy3 --version
+    pypy3 --version && \
+    node --version
 
 # 创建必要目录并复制配置文件
 RUN mkdir -p /root/.hydro && \
