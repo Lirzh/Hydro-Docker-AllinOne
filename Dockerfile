@@ -20,6 +20,7 @@ RUN apt-get -qq update && \
     libreadline-dev \
     libsqlite3-dev \
     tk-dev \
+    gwak \
     bash \
     # openjdk-21-jdk-headless \
     # fpc \
@@ -109,7 +110,7 @@ RUN yarn global add pm2 hydrooj @hydrooj/ui-default @hydrooj/hydrojudge @hydrooj
 # 下载 go-judge 沙箱
 RUN arch=$(dpkg --print-architecture) && \
     case "$arch" in \
-      amd64)  url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_amd64" ;; \
+      amd64)  url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_amd64v3" ;; \
       arm64)  url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_arm64" ;; \
       *) echo "Unsupported architecture: $arch" && exit 1 ;; \
     esac && \
