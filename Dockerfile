@@ -20,7 +20,7 @@ RUN apt-get -qq update && \
     libreadline-dev \
     libsqlite3-dev \
     tk-dev \
-    gwak \
+    gawk \
     bash \
     # openjdk-21-jdk-headless \
     # fpc \
