@@ -82,7 +82,7 @@ RUN gcc --version && \
     # python2 --version && \
     # python3 --version && \
     # pypy3 --version && \
-    mongodb --version
+    mongod --version
 
 # 创建必要目录
 RUN mkdir -p /root/.hydro && \
