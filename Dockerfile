@@ -105,7 +105,7 @@ RUN MONGO_HOST="${MONGO_HOST:-localhost}" && \
     echo "{\"host\": \"${MONGO_HOST}\", \"port\": \"${MONGO_PORT}\", \"name\": \"${MONGO_NAME}\", \"username\": \"${MONGO_USER}\", \"password\": \"${MONGO_PASS}\"}" > /root/.hydro/config.json
 
 # 安装 pm2、hydrooj、ui-default 和 hydrojudge
-RUN yarn global add pm2 hydrooj @hydrooj/ui-default @hydrooj/hydrojudge @hydrooj/a11y
+RUN yarn global add pm2 koa @types/markdown-it hydrooj @hydrooj/ui-default @hydrooj/hydrojudge @hydrooj/a11y
 
 # 下载 go-judge 沙箱
 RUN arch=$(dpkg --print-architecture) && \
