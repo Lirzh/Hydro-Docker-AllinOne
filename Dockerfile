@@ -1,90 +1,129 @@
-FROM node:22-alpine
+FROM node:lts-trixie
 
-ENV NODE_ENV=production
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ==================== 核心：给 Alpine 安装 完整 glibc（复刻Nix运行原理） ====================
-# 安装官方信任密钥 + glibc 仓库（Alpine 标准完整 glibc 源，社区公认稳定）
-RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-bin-2.35-r1.apk && \
-    apk add --no-cache --force-overwrite \
-        glibc-2.35-r1.apk \
-        glibc-bin-2.35-r1.apk && \
-    rm -rf *.apk
-
-# 配置 glibc 库路径（让系统优先使用完整glibc，而非musl）
-ENV LD_LIBRARY_PATH=/usr/glibc-compat/lib:/usr/local/lib:/lib
-ENV PATH=/usr/glibc-compat/bin:$PATH
-
-# ==================== 安装基础依赖 ====================
-RUN apk update && apk add --no-cache \
+# 统一更新软件源并安装所有依赖
+RUN apt-get -qq update && \
+    apt-get install -y --no-install-recommends \
     curl \
     gnupg \
-    ca-certificates \
+    ca-certificates\
     gcc \
     g++ \
     make \
     wget \
-    build-base \
-    zlib-dev \
-    openssl-dev \
+    build-essential \
+    zlib1g-dev \
+    libssl-dev \
     libffi-dev \
-    bzip2-dev \
-    readline-dev \
-    sqlite-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
     tk-dev \
     gawk \
     bash \
-    openssl
+    # openjdk-21-jdk-headless \
+    # fpc \
+    # fp-compiler \
+    # rustc \
+    # ghc \
+    # cabal-install \
+    # libjavascriptcoregtk-4.0-bin \
+    # golang \
+    # ruby \
+    # mono-runtime \
+    # mono-mcs \
+    # kotlin \
+    # php \
+    # php-cli \
+    # python3 \
+    # pypy3 \
+    && rm -rf /var/lib/apt/lists/*
 
-# ==================== 安装 MongoDB 8.0（完整glibc加持，无任何符号报错） ====================
-ENV MONGO_VERSION=8.0.0
-RUN mkdir -p /opt/mongodb /data/db /var/log/mongodb && \
-    ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then MONGO_ARCH="x86_64"; else MONGO_ARCH="aarch64"; fi && \
-    wget -O /tmp/mongodb.tgz https://fastdl.mongodb.org/linux/mongodb-linux-${MONGO_ARCH}-ubuntu2204-${MONGO_VERSION} && \
-    tar -zxvf /tmp/mongodb.tgz --strip 1 -C /opt/mongodb && \
-    rm -f /tmp/mongodb.tgz && \
-    ln -s /opt/mongodb/bin/mongod /usr/bin/mongod && \
-    ln -s /opt/mongodb/bin/mongosh /usr/bin/mongosh && \
-    chmod -R 777 /data/db /var/log/mongodb
+# 更新 MongoDB 源
+RUN curl -fsSL https://pgp.mongodb.com/server-8.0.asc | \
+   gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg \
+   --dearmor \
+   && echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
 
-# 验证：MongoDB 完美运行（无符号错误）
-RUN gcc --version && g++ --version && mongod --version
+# 安装 MongoDB
+RUN apt-get -qq update && \
+    apt-get install -y mongodb-org && \
+    rm -rf /var/lib/apt/lists/*
 
-# ==================== 后续配置（完全保留你的原有逻辑） ====================
+# # 手动安装 Python2.7.18
+# RUN cd /tmp && \
+#     wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz && \
+#     tar -xzf Python-2.7.18.tgz && \
+#     cd Python-2.7.18 && \
+#     ./configure --prefix=/usr/local --enable-unicode=ucs4 && \
+#     make -j$(nproc) && \
+#     make altinstall && \
+#     ln -s /usr/local/bin/python2.7 /usr/bin/python2 && \
+#     cd / && rm -rf /tmp/Python-2.7.18*
+
+# # 设置 python 命令优先使用 python3
+# RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 2 && \
+#     update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+
+# 验证工具链
+RUN gcc --version && \
+    g++ --version && \
+    # fpc -iV && \
+    # javac -version && \
+    # rustc --version && \
+    # ghc --version && \
+    # cabal --version && \
+    # go version && \
+    # ruby --version && \
+    # mono --version && \
+    # kotlinc -version && \
+    # php --version && \
+    # node --version && \
+    # python2 --version && \
+    # python3 --version && \
+    # pypy3 --version && \
+    mongod --version
+
+# 创建必要目录
 RUN mkdir -p /root/.hydro && \
     mkdir -p /root/.pm2/logs && \
-    mkdir -p /root/.pm2/pids
+    mkdir -p /root/.pm2/pids && \
+    mkdir -p /data/db && \
+    mkdir -p /var/log/mongodb
 
+# 初始化 addon.json
 RUN echo '["@hydrooj/ui-default", "@hydrooj/hydrojudge", "@hydrooj/a11y"]' > /root/.hydro/addon.json
 
+# 初始化 config.json - 使用本地 MongoDB
 RUN MONGO_HOST="${MONGO_HOST:-localhost}" && \
     MONGO_PORT="${MONGO_PORT:-27017}" && \
     MONGO_NAME="${MONGO_NAME:-hydro}" && \
     MONGO_USER="${MONGO_USER:-}" && \
+    # 我也不知道下面这一行有什么实际区别，但总比留空好吧
     MONGO_PASS="${MONGO_PASS:-$(openssl rand -base64 32)}" && \
     echo "{\"host\": \"${MONGO_HOST}\", \"port\": \"${MONGO_PORT}\", \"name\": \"${MONGO_NAME}\", \"username\": \"${MONGO_USER}\", \"password\": \"${MONGO_PASS}\"}" > /root/.hydro/config.json
 
-# 安装 PM2 + HydroOJ
+# 安装 pm2、hydrooj、ui-default 和 hydrojudge
 RUN yarn global add pm2 koa @types/markdown-it hydrooj @hydrooj/ui-default @hydrooj/hydrojudge @hydrooj/a11y
 
-# 安装 go-judge 沙箱
-RUN arch=$(uname -m) && \
+# 下载 go-judge 沙箱
+RUN arch=$(dpkg --print-architecture) && \
     case "$arch" in \
-      x86_64)  url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_amd64v3" ;; \
-      aarch64) url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_arm64" ;; \
-      *) echo "Unsupported architecture" && exit 1 ;; \
+      amd64)  url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_amd64v3" ;; \
+      arm64)  url="https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_arm64" ;; \
+      *) echo "Unsupported architecture: $arch" && exit 1 ;; \
     esac && \
-    wget $url -O /usr/bin/sandbox && chmod +x /usr/bin/sandbox
+    wget "$url" -O /usr/bin/sandbox && \
+    chmod +x /usr/bin/sandbox
 
-# 初始化 MongoDB + HydroOJ
+# 设置监听所有 ip 以适配 docker 环境
 RUN mongod --dbpath /data/db --fork --logpath /var/log/mongodb/mongod.log && \
-    until mongosh --quiet --eval "db.adminCommand('ping')"; do sleep 1; done && \
+    until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do sleep 1; done && \
     hydrooj cli system set server.host 0.0.0.0 && \
     mongod --dbpath /data/db --shutdown
 
-# 启动配置
+# 复制 PM2 ecosystem 配置文件
 COPY ecosystem.config.js /etc/ecosystem.config.js
+
 ENTRYPOINT ["bash", "-c", "pm2-runtime /etc/ecosystem.config.js"]
