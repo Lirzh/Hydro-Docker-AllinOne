@@ -7,7 +7,8 @@ RUN apt-get -qq update && \
     apt-get install -y --no-install-recommends \
     curl \
     gnupg \
-    ca-certificates\
+    ca-certificates \
+    openssl \
     gcc \
     g++ \
     make \
